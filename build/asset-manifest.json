@@ -1,0 +1,18 @@
+{
+  "files": {
+    "main.css": "/mapartcraft/static/css/main.e328bfd3.css",
+    "main.js": "/mapartcraft/static/js/main.da83331d.js",
+    "static/media/textures.png": "/mapartcraft/static/media/textures.7a164605051b2f6fa999.png",
+    "static/media/classicVsValley.png": "/mapartcraft/static/media/classicVsValley.fb0924c8c55083db0fa2.png",
+    "static/media/kenpixel_mini_square.woff": "/mapartcraft/static/media/kenpixel_mini_square.049f97fdc3d085c627b3.woff",
+    "static/media/flag_pop.svg": "/mapartcraft/static/media/flag_pop.431e7ad360e83cc68732a387bc1c6e2e.svg",
+    "static/media/flag.svg": "/mapartcraft/static/media/flag.79f8026389226d251e8d5d1a323c73e0.svg",
+    "index.html": "/mapartcraft/index.html",
+    "main.e328bfd3.css.map": "/mapartcraft/static/css/main.e328bfd3.css.map",
+    "main.da83331d.js.map": "/mapartcraft/static/js/main.da83331d.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e328bfd3.css",
+    "static/js/main.da83331d.js"
+  ]
+}
