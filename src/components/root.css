@@ -1,0 +1,72 @@
+.titleAndLanguages {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.fixedMessages {
+    position: fixed;
+    bottom: 0.1em;
+    right: 0.1em;
+    max-width: 20em;
+    z-index: 200;
+}
+
+.fixedMessage {
+    margin: 0.1em;
+    padding: 0.3em;
+    border: 0.1em solid var(--rebaneGreen);
+    background-color: #333;
+}
+
+.fixedMessage p {
+    margin: 0;
+}
+
+.fixedMessage button {
+    width: 100%;
+}
+
+.pixelEditorOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.pixelEditorModal {
+  position: relative;
+  background: #333;
+  color: #fff;
+  width: min(1600px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 12px 50px rgba(0, 0, 0, 0.5);
+}
+
+.pixelEditorClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pixelEditorAreasPanel input:not([type="checkbox"]),
+.pixelEditorAreasPanel select {
+  box-sizing: border-box;
+  max-width: 100%;
+}
