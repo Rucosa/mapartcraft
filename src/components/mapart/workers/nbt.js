@@ -246,6 +246,319 @@ class NBTWriter {
   }
 }
 
+const StaircaseRelation = { FREE: 0, FLAT: 1, UP: 2, DOWN: 3 };
+
+function getStaircaseObjective(heights, air, relations, width, depth, params) {
+  let objective = 0;
+  for (let x = 1; x < width; x += 1) {
+    for (let z = 0; z < depth; z += 1) {
+      const current = x * depth + z;
+      const previous = current - depth;
+      if (air[current] || air[previous]) continue;
+      const difference = Math.abs(heights[current] - heights[previous]);
+      objective += params.boundary * (difference > 0) + params.size * difference;
+    }
+  }
+  for (let x = 0; x < width; x += 1) {
+    for (let z = 0; z < depth; z += 1) {
+      const current = x * depth + z;
+      if (air[current]) continue;
+      objective += params.gravity * heights[current];
+      if (z === 0 || air[current - 1]) continue;
+      const relation = relations[current];
+      if (relation === StaircaseRelation.UP || relation === StaircaseRelation.DOWN) {
+        objective += params.jump * (Math.abs(heights[current] - heights[current - 1]) - 1);
+      }
+    }
+  }
+  return objective;
+}
+
+function solveStaircaseColumn(x, heights, air, relations, anchors, depthBounds, width, depth, maxHeight, params) {
+  const stateCount = maxHeight + 1;
+  const backPointers = new Array(depth);
+  let previousCosts = new Float64Array(stateCount);
+  previousCosts.fill(Number.POSITIVE_INFINITY);
+
+  for (let z = 0; z < depth; z += 1) {
+    const index = x * depth + z;
+    const isAir = air[index] === 1;
+    const costs = new Float64Array(stateCount);
+    costs.fill(Number.POSITIVE_INFINITY);
+    const minHeight = isAir ? 0 : depthBounds[index];
+    const fixedHeight = anchors[index];
+    for (let height = minHeight; height <= maxHeight; height += 1) {
+      if (fixedHeight >= 0 && height !== fixedHeight) continue;
+      if (!isAir) {
+        let cost = params.gravity * height;
+        if (x > 0 && !air[index - depth]) {
+          const difference = Math.abs(height - heights[index - depth]);
+          cost += params.boundary * (difference > 0) + params.size * difference;
+        }
+        if (x + 1 < width && !air[index + depth]) {
+          const difference = Math.abs(height - heights[index + depth]);
+          cost += params.boundary * (difference > 0) + params.size * difference;
+        }
+        costs[height] = cost;
+      } else {
+        costs[height] = 0;
+      }
+    }
+
+    if (z === 0) {
+      previousCosts = costs;
+      continue;
+    }
+
+    const previousIndex = index - 1;
+    let relation = relations[index];
+    if (isAir || air[previousIndex]) relation = StaircaseRelation.FREE;
+    const transitions = new Float64Array(stateCount);
+    const pointers = new Int16Array(stateCount);
+    transitions.fill(Number.POSITIVE_INFINITY);
+    pointers.fill(-1);
+
+    if (relation === StaircaseRelation.FREE) {
+      let bestCost = Number.POSITIVE_INFINITY;
+      let bestHeight = -1;
+      for (let height = 0; height < stateCount; height += 1) {
+        if (previousCosts[height] < bestCost) {
+          bestCost = previousCosts[height];
+          bestHeight = height;
+        }
+      }
+      transitions.fill(bestCost);
+      pointers.fill(bestHeight);
+    } else if (relation === StaircaseRelation.FLAT) {
+      transitions.set(previousCosts);
+      for (let height = 0; height < stateCount; height += 1) pointers[height] = height;
+    } else if (relation === StaircaseRelation.UP) {
+      let bestCost = Number.POSITIVE_INFINITY;
+      let bestHeight = -1;
+      for (let height = 0; height < stateCount; height += 1) {
+        if (height > 0) {
+          const candidate = previousCosts[height - 1] - params.jump * (height - 1);
+          if (candidate < bestCost) {
+            bestCost = candidate;
+            bestHeight = height - 1;
+          }
+        }
+        if (height > 0 && bestHeight >= 0) {
+          transitions[height] = params.jump * (height - 1) + bestCost;
+          pointers[height] = bestHeight;
+        }
+      }
+    } else {
+      let bestCost = Number.POSITIVE_INFINITY;
+      let bestHeight = -1;
+      for (let height = maxHeight; height >= 0; height -= 1) {
+        if (height < maxHeight) {
+          const candidate = previousCosts[height + 1] + params.jump * (height + 1);
+          if (candidate < bestCost) {
+            bestCost = candidate;
+            bestHeight = height + 1;
+          }
+        }
+        if (height < maxHeight && bestHeight >= 0) {
+          transitions[height] = -params.jump * (height + 1) + bestCost;
+          pointers[height] = bestHeight;
+        }
+      }
+    }
+
+    for (let height = 0; height < stateCount; height += 1) costs[height] += transitions[height];
+    backPointers[z] = pointers;
+    previousCosts = costs;
+  }
+
+  let currentHeight = 0;
+  for (let height = 1; height < stateCount; height += 1) {
+    if (previousCosts[height] < previousCosts[currentHeight]) currentHeight = height;
+  }
+  if (!Number.isFinite(previousCosts[currentHeight])) {
+    throw new Error("Could not find valid optimized staircase heights.");
+  }
+  const result = new Int32Array(depth);
+  result[depth - 1] = currentHeight;
+  for (let z = depth - 1; z > 0; z -= 1) {
+    currentHeight = backPointers[z][currentHeight];
+    if (currentHeight < 0) throw new Error("Could not trace optimized staircase heights.");
+    result[z - 1] = currentHeight;
+  }
+  return result;
+}
+
+function refineStaircaseHeights(data, params) {
+  const { heights, air, relations, anchors, depthBounds, width, depth, maxHeight } = data;
+  let objective = getStaircaseObjective(heights, air, relations, width, depth, params);
+  for (let sweep = 0; sweep < 40; sweep += 1) {
+    const previousObjective = objective;
+    for (let parity = 0; parity < 2; parity += 1) {
+      for (let x = parity; x < width; x += 2) {
+        const next = solveStaircaseColumn(
+          x, heights, air, relations, anchors, depthBounds, width, depth, maxHeight, params
+        );
+        for (let z = 0; z < depth; z += 1) {
+          const index = x * depth + z;
+          if (!air[index]) heights[index] = next[z];
+        }
+      }
+    }
+    objective = getStaircaseObjective(heights, air, relations, width, depth, params);
+    if (previousObjective - objective < 1e-6) break;
+  }
+}
+
+function shiftStaircaseRegions(data, params) {
+  const { heights, air, relations, anchors, depthBounds, width, depth, maxHeight } = data;
+  const visited = new Uint8Array(heights.length);
+  const queue = new Int32Array(heights.length);
+  const regions = [];
+  for (let start = 0; start < heights.length; start += 1) {
+    if (air[start] || visited[start]) continue;
+    const height = heights[start];
+    const cells = [];
+    let queueStart = 0;
+    let queueEnd = 0;
+    queue[queueEnd++] = start;
+    visited[start] = 1;
+    while (queueStart < queueEnd) {
+      const index = queue[queueStart++];
+      cells.push(index);
+      const x = Math.floor(index / depth);
+      const z = index % depth;
+      const neighbors = [
+        x > 0 ? index - depth : -1,
+        x + 1 < width ? index + depth : -1,
+        z > 0 ? index - 1 : -1,
+        z + 1 < depth ? index + 1 : -1,
+      ];
+      for (const neighbor of neighbors) {
+        if (neighbor < 0 || air[neighbor] || visited[neighbor] || heights[neighbor] !== height) continue;
+        visited[neighbor] = 1;
+        queue[queueEnd++] = neighbor;
+      }
+    }
+    regions.push({ height, cells });
+  }
+
+  regions.sort((first, second) => second.cells.length - first.cells.length);
+  let moved = 0;
+  for (const region of regions) {
+    const { height, cells } = region;
+    let hasAnchor = false;
+    let minDelta = -height;
+    let maxDelta = maxHeight - height;
+    const horizontalNeighbors = [];
+    const verticalNeighbors = [];
+    for (const index of cells) {
+      if (heights[index] !== height) {
+        hasAnchor = true;
+        break;
+      }
+      if (anchors[index] >= 0) {
+        hasAnchor = true;
+        break;
+      }
+      minDelta = Math.max(minDelta, depthBounds[index] - height);
+      const x = Math.floor(index / depth);
+      const z = index % depth;
+      for (const dx of [-1, 1]) {
+        const neighborX = x + dx;
+        if (neighborX < 0 || neighborX >= width) continue;
+        const neighbor = neighborX * depth + z;
+        if (!air[neighbor] && heights[neighbor] !== height) horizontalNeighbors.push(heights[neighbor]);
+      }
+      for (const dz of [-1, 1]) {
+        const neighborZ = z + dz;
+        if (neighborZ < 0 || neighborZ >= depth) continue;
+        const neighbor = x * depth + neighborZ;
+        if (air[neighbor] || heights[neighbor] === height) continue;
+        const relation = relations[x * depth + Math.max(z, neighborZ)];
+        if (relation !== StaircaseRelation.UP && relation !== StaircaseRelation.DOWN) continue;
+        const neighborHeight = heights[neighbor];
+        const patchIsNorth = dz === 1;
+        if ((relation === StaircaseRelation.UP) === patchIsNorth) {
+          maxDelta = Math.min(maxDelta, neighborHeight - height - 1);
+        } else {
+          minDelta = Math.max(minDelta, neighborHeight - height + 1);
+        }
+        verticalNeighbors.push(neighborHeight);
+      }
+    }
+    if (hasAnchor || minDelta > maxDelta || (minDelta === 0 && maxDelta === 0)) continue;
+
+    const score = (delta) => {
+      let result = params.gravity * cells.length * delta;
+      for (const neighborHeight of horizontalNeighbors) {
+        const difference = Math.abs(height + delta - neighborHeight);
+        result += params.boundary * (difference > 0) + params.size * difference;
+      }
+      for (const neighborHeight of verticalNeighbors) {
+        result += params.jump * Math.abs(height + delta - neighborHeight);
+      }
+      return result;
+    };
+    const originalScore = score(0);
+    let bestDelta = 0;
+    let bestScore = originalScore;
+    for (let delta = minDelta; delta <= maxDelta; delta += 1) {
+      const candidate = score(delta);
+      if (candidate < bestScore) {
+        bestScore = candidate;
+        bestDelta = delta;
+      }
+    }
+    if (bestScore < originalScore - 1e-9) {
+      for (const index of cells) heights[index] += bestDelta;
+      moved += 1;
+    }
+  }
+  return moved;
+}
+
+function optimizeStaircaseHeights(data, advanced) {
+  const params = advanced
+    ? { boundary: 1, size: 0.05, gravity: 0.003, jump: 0.05 }
+    : { boundary: 1, size: 0.25, gravity: 0.03, jump: 0.05 };
+  refineStaircaseHeights(data, params);
+  if (advanced) {
+    for (let round = 0; round < 6; round += 1) {
+      if (shiftStaircaseRegions(data, params) === 0) break;
+      refineStaircaseHeights(data, params);
+    }
+  }
+  if (!data.anchors.some((height) => height >= 0)) {
+    let shift = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < data.heights.length; index += 1) {
+      if (!data.air[index]) shift = Math.min(shift, data.heights[index] - data.depthBounds[index]);
+    }
+    if (shift > 0 && Number.isFinite(shift)) {
+      for (let index = 0; index < data.heights.length; index += 1) {
+        if (!data.air[index]) data.heights[index] -= shift;
+      }
+    }
+  }
+}
+
+function staircaseHeightsAreValid(data) {
+  const { heights, air, relations, anchors, depthBounds, width, depth, maxHeight } = data;
+  for (let x = 0; x < width; x += 1) {
+    for (let z = 0; z < depth; z += 1) {
+      const index = x * depth + z;
+      if (air[index]) continue;
+      if (heights[index] < depthBounds[index] || heights[index] > maxHeight) return false;
+      if (anchors[index] >= 0 && heights[index] !== anchors[index]) return false;
+      if (z === 0 || air[index - 1] || relations[index] === StaircaseRelation.FREE) continue;
+      const difference = heights[index] - heights[index - 1];
+      if (relations[index] === StaircaseRelation.FLAT && difference !== 0) return false;
+      if (relations[index] === StaircaseRelation.UP && difference < 1) return false;
+      if (relations[index] === StaircaseRelation.DOWN && difference > -1) return false;
+    }
+  }
+  return true;
+}
+
 class Map_NBT {
   constructor(map) {
     this.mapColoursLayout = map.coloursLayout;
@@ -362,6 +675,114 @@ class Map_NBT {
         body: (columnNumber + 1) / this.mapColoursLayout.length,
       });
     }
+    if (
+      optionValue_staircasing === MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_COMPACT.uniqueId ||
+      optionValue_staircasing === MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId
+    ) {
+      this.optimizeStaircaseLayout(
+        optionValue_staircasing === MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId
+      );
+    }
+  }
+
+  optimizeStaircaseLayout(advanced) {
+    const width = this.physicalLayout.length;
+    const depth = this.mapColoursLayout[0].length + 1;
+    const cellCount = width * depth;
+    const tops = new Int32Array(cellCount);
+    const bottoms = new Int32Array(cellCount);
+    tops.fill(-2147483648);
+    bottoms.fill(2147483647);
+    const air = new Uint8Array(cellCount);
+    const airPaletteIds = new Set(
+      this.NBT_json.value.palette.value.value.reduce((ids, paletteItem, index) => {
+        if (["minecraft:air", "minecraft:cave_air", "minecraft:void_air"].includes(paletteItem.Name.value)) {
+          ids.push(index);
+        }
+        return ids;
+      }, [])
+    );
+
+    for (let x = 0; x < width; x += 1) {
+      for (const block of this.physicalLayout[x]) {
+        const [blockX, y, z] = block.pos.value.value;
+        const index = blockX * depth + z;
+        tops[index] = Math.max(tops[index], y);
+        bottoms[index] = Math.min(bottoms[index], y);
+        if (airPaletteIds.has(block.state.value)) air[index] = 1;
+      }
+    }
+
+    let yBase = Number.POSITIVE_INFINITY;
+    let maxHeight = 0;
+    for (let index = 0; index < cellCount; index += 1) {
+      if (air[index] || tops[index] === -2147483648) continue;
+      yBase = Math.min(yBase, bottoms[index]);
+      maxHeight = Math.max(maxHeight, tops[index]);
+    }
+    if (!Number.isFinite(yBase)) return;
+
+    const heights = new Int32Array(cellCount);
+    const depthBounds = new Int32Array(cellCount);
+    const anchors = new Int32Array(cellCount);
+    anchors.fill(-1);
+    const relations = new Uint8Array(cellCount);
+    for (let x = 0; x < width; x += 1) {
+      for (let z = 0; z < depth; z += 1) {
+        const index = x * depth + z;
+        if (tops[index] === -2147483648) {
+          air[index] = 1;
+          continue;
+        }
+        heights[index] = tops[index] - yBase;
+        if (air[index]) continue;
+        depthBounds[index] = tops[index] - bottoms[index];
+        if (z === 0) continue;
+        const previousIndex = index - 1;
+        if (air[previousIndex]) {
+          anchors[index] = heights[index];
+        } else {
+          const difference = heights[index] - heights[previousIndex];
+          relations[index] = difference === 0
+            ? StaircaseRelation.FLAT
+            : difference > 0
+              ? StaircaseRelation.UP
+              : StaircaseRelation.DOWN;
+        }
+      }
+    }
+
+    const originalMaxHeight = maxHeight - yBase;
+    const optimizationMaxHeight = advanced
+      ? Math.max(originalMaxHeight, 128 - yBase)
+      : originalMaxHeight;
+    const data = {
+      heights,
+      air,
+      relations,
+      anchors,
+      depthBounds,
+      width,
+      depth,
+      maxHeight: optimizationMaxHeight,
+    };
+    optimizeStaircaseHeights(data, advanced);
+    if (!staircaseHeightsAreValid(data)) {
+      throw new Error("Optimized staircase heights do not preserve map shades.");
+    }
+
+    for (let x = 0; x < width; x += 1) {
+      let columnMaxHeight = Number.MIN_SAFE_INTEGER;
+      for (const block of this.physicalLayout[x]) {
+        const [blockX, y, z] = block.pos.value.value;
+        const index = blockX * depth + z;
+        if (!air[index]) {
+          block.pos.value.value[1] = yBase + heights[index] + y - tops[index];
+        }
+        columnMaxHeight = Math.max(columnMaxHeight, block.pos.value.value[1]);
+      }
+      this.columnHeightsCache[x] = columnMaxHeight;
+    }
   }
 
   getPhysicalLayout_individualColumn(columnNumber) {
@@ -377,7 +798,9 @@ class Map_NBT {
       case MapModes.SCHEMATIC_NBT.staircaseModes.CLASSIC.uniqueId:
       case MapModes.SCHEMATIC_NBT.staircaseModes.VALLEY.uniqueId:
       case MapModes.SCHEMATIC_NBT.staircaseModes.UPWARDS_ONLY.uniqueId:
-      case MapModes.SCHEMATIC_NBT.staircaseModes.REVERSE_UPWARDS_ONLY.uniqueId: {
+      case MapModes.SCHEMATIC_NBT.staircaseModes.REVERSE_UPWARDS_ONLY.uniqueId:
+      case MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_COMPACT.uniqueId:
+      case MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId: {
         // this doesn't matter
         // in the classic case each column is later adjusted to have its global minimum at y = 0 so the map has a common base / is as short as possible
         // in the valley case valleys are pulled down to y = 0
@@ -620,7 +1043,9 @@ class Map_NBT {
         }
         break;
       }
-      case MapModes.SCHEMATIC_NBT.staircaseModes.CLASSIC.uniqueId: {
+      case MapModes.SCHEMATIC_NBT.staircaseModes.CLASSIC.uniqueId:
+      case MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_COMPACT.uniqueId:
+      case MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId: {
         // make sure the column's global minimum is at y = 0; doing this for every column gives the map a common base.
         const columnMinimumY = physicalColumn.reduce((a, b) => (a.pos.value.value[1] < b.pos.value.value[1] ? a : b)).pos.value.value[1];
         physicalColumn.forEach((block) => {
@@ -639,6 +1064,7 @@ class Map_NBT {
     }
 
     this.NBT_json.value.blocks.value.value = this.NBT_json.value.blocks.value.value.concat(physicalColumn);
+    this.physicalLayout[columnNumber] = physicalColumn;
     this.columnHeightsCache.push(physicalColumn.reduce((a, b) => (a.pos.value.value[1] > b.pos.value.value[1] ? a : b)).pos.value.value[1]);
   }
 

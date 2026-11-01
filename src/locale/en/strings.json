@@ -103,7 +103,9 @@
       "ON-UNOBTAINABLE": "On (Unobtainable)",
       "FULL-UNOBTAINABLE": "Full-Unobtainable",
       "UPWARDS-ONLY": "Half-Light (Upwards Only)",
-      "REVERSE-UPWARDS-ONLY": "Half-Dark (Reverse-Upwards Only)"
+      "REVERSE-UPWARDS-ONLY": "Half-Dark (Reverse-Upwards Only)",
+      "OPTIMIZED-COMPACT": "Optimized (Compact)",
+      "OPTIMIZED-TERRACES": "Optimized (Terraces)"
     },
     "NBT-SPECIFIC": {
       "WHERE-SUPPORT-BLOCKS": {
@@ -158,7 +160,7 @@
     "EXTRAS": {
       "TITLE": "Extras",
       "MORE-STAIRCASING-OPTIONS": "More Staircasing Options",
-      "MORE-STAIRCASING-OPTIONS-TT": "Full-Dark, Full-Light, and Full-Unobtainable options"
+      "MORE-STAIRCASING-OPTIONS-TT": "Shows additional staircasing options, including optimized staircases."
     }
   },
   "DOWNLOAD": {

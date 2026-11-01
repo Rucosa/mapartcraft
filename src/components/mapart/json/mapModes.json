@@ -44,6 +44,18 @@
         "localeKey": "MAP-SETTINGS/3D/UPWARDS-ONLY",
         "toneKeys": ["normal", "light"],
         "extra": true
+      },
+      "OPTIMIZED_COMPACT": {
+        "uniqueId": 15,
+        "localeKey": "MAP-SETTINGS/3D/OPTIMIZED-COMPACT",
+        "toneKeys": ["dark", "normal", "light"],
+        "extra": true
+      },
+      "OPTIMIZED_TERRACES": {
+        "uniqueId": 16,
+        "localeKey": "MAP-SETTINGS/3D/OPTIMIZED-TERRACES",
+        "toneKeys": ["dark", "normal", "light"],
+        "extra": true
       }
     }
   },

@@ -97,6 +97,8 @@
       "VALLEY": "Encendido (valle)",
       "FULL-DARK": "Oscuro (Creciente Sur-Norte)",
       "FULL-LIGHT": "Claro (Creciente Norte-Sur)",
+      "OPTIMIZED-COMPACT": "Optimizado (compacto)",
+      "OPTIMIZED-TERRACES": "Optimizado (terrazas)",
       "ON": "Encendido",
       "ON-UNOBTAINABLE": "Encendido (No obtenibles)",
       "FULL-UNOBTAINABLE": "Solo colores no obtenibles"
@@ -154,7 +156,7 @@
     "EXTRAS": {
       "TITLE": "Extras",
       "MORE-STAIRCASING-OPTIONS": "Más opciones de escalonado",
-      "MORE-STAIRCASING-OPTIONS-TT": "Para escalonado oscuro, claro y colores no obtenibles."
+      "MORE-STAIRCASING-OPTIONS-TT": "Muestra opciones adicionales, incluidas las versiones optimizadas."
     }
   },
   "DOWNLOAD": {

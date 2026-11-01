@@ -30,6 +30,8 @@ class BlockSelection extends Component {
       }
       case MapModes.SCHEMATIC_NBT.staircaseModes.CLASSIC.uniqueId:
       case MapModes.SCHEMATIC_NBT.staircaseModes.VALLEY.uniqueId:
+      case MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_COMPACT.uniqueId:
+      case MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId:
       case MapModes.MAPDAT.staircaseModes.ON.uniqueId: {
         background = `linear-gradient(${this.cssRGB(colourSet.tonesRGB.dark)} 33%, ${this.cssRGB(colourSet.tonesRGB.normal)} 33%, ${this.cssRGB(
           colourSet.tonesRGB.normal
@@ -87,6 +89,8 @@ class BlockSelection extends Component {
     switch (optionValue_staircasing) {
       case MapModes.SCHEMATIC_NBT.staircaseModes.CLASSIC.uniqueId:
       case MapModes.SCHEMATIC_NBT.staircaseModes.VALLEY.uniqueId:
+      case MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_COMPACT.uniqueId:
+      case MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId:
         return (
           <React.Fragment>
             <Tooltip tooltipText="DARK SHADE">

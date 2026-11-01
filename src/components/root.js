@@ -34,7 +34,7 @@ class Root extends Component {
       for (const stringSegment of stringSegments) {
         folder = folder[stringSegment];
       }
-      if (folder[stringLast] === null) {
+      if (folder[stringLast] === null || folder[stringLast] === undefined) {
         // this could get stuck in an endless loop if the string does not exist in en;
         // en must always exist
         return this.getLocaleString(stringName, "en");
