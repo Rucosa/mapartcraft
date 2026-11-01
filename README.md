@@ -20,7 +20,7 @@ The default build settings assume the app is being hosted at https://YOUR-SITE-H
 
 # Usage
 
-Visit [MapartCraft](https://mike2b2t.github.io/mapartcraft). This is a fork of the original tool with newer version support.
+Visit [MapartCraft]((https://rucosa.github.io/mapartcraft/)). This is a fork of the original tool with newer version support.
 
 You can find the original MapartCraft tool on [rebane2001.com](https://rebane2001.com/mapartcraft) or use a mirror on [web.archive.org](https://web.archive.org/web/*/https://rebane2001.com/mapartcraft).
 
