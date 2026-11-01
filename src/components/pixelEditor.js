@@ -223,6 +223,7 @@ export default function PixelEditor({
   const [layers, setLayers] = useState(initialLayers);
   const [selectedLayerId, setSelectedLayerId] = useState(null);
   const [selectingArea, setSelectingArea] = useState(false);
+  const [detectingArea, setDetectingArea] = useState(false);
   const [areaSelectionMode, setAreaSelectionMode] = useState("rectangle");
   const [selection, setSelection] = useState(null);
   const [freehandPath, setFreehandPath] = useState([]);
@@ -609,56 +610,29 @@ export default function PixelEditor({
     return true;
   };
 
-  const detectBackgroundArea = () => {
+  const detectAreaFromPixel = (seed) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const { width, height } = canvas;
     const data = canvas.getContext("2d").getImageData(0, 0, width, height).data;
-    const histogram = new Map();
-    const addEdgePixel = (x, y) => {
-      const index = (y * width + x) * 4;
-      const alpha = data[index + 3] / 255;
-      const red = Math.round(data[index] * alpha + 255 * (1 - alpha));
-      const green = Math.round(data[index + 1] * alpha + 255 * (1 - alpha));
-      const blue = Math.round(data[index + 2] * alpha + 255 * (1 - alpha));
-      const key = `${red >> 4},${green >> 4},${blue >> 4}`;
-      const bin = histogram.get(key) || { count: 0, red: 0, green: 0, blue: 0 };
-      bin.count += 1;
-      bin.red += red;
-      bin.green += green;
-      bin.blue += blue;
-      histogram.set(key, bin);
-    };
-    for (let x = 0; x < width; x += 1) {
-      addEdgePixel(x, 0);
-      if (height > 1) addEdgePixel(x, height - 1);
-    }
-    for (let y = 1; y < height - 1; y += 1) {
-      addEdgePixel(0, y);
-      if (width > 1) addEdgePixel(width - 1, y);
-    }
-    const dominantBin = Array.from(histogram.values()).reduce((dominant, bin) =>
-      !dominant || bin.count > dominant.count ? bin : dominant, null);
-    if (!dominantBin) {
-      setMessage("Could not detect a background color.");
-      return;
-    }
-    const backgroundColor = [
-      dominantBin.red / dominantBin.count,
-      dominantBin.green / dominantBin.count,
-      dominantBin.blue / dominantBin.count,
+    const seedIndex = (seed.y * width + seed.x) * 4;
+    const seedAlpha = data[seedIndex + 3] / 255;
+    const seedColor = [
+      data[seedIndex] * seedAlpha + 255 * (1 - seedAlpha),
+      data[seedIndex + 1] * seedAlpha + 255 * (1 - seedAlpha),
+      data[seedIndex + 2] * seedAlpha + 255 * (1 - seedAlpha),
     ];
     const toleranceSquared = 48 * 48;
-    const isBackgroundCandidate = (pixelIndex) => {
+    const isAreaCandidate = (pixelIndex) => {
       const index = pixelIndex * 4;
       const alpha = data[index + 3] / 255;
       const red = data[index] * alpha + 255 * (1 - alpha);
       const green = data[index + 1] * alpha + 255 * (1 - alpha);
       const blue = data[index + 2] * alpha + 255 * (1 - alpha);
       return (
-        (red - backgroundColor[0]) ** 2 +
-        (green - backgroundColor[1]) ** 2 +
-        (blue - backgroundColor[2]) ** 2 <= toleranceSquared
+        (red - seedColor[0]) ** 2 +
+        (green - seedColor[1]) ** 2 +
+        (blue - seedColor[2]) ** 2 <= toleranceSquared
       );
     };
     const pixelCount = width * height;
@@ -667,19 +641,12 @@ export default function PixelEditor({
     let stackSize = 0;
     const addCandidate = (x, y) => {
       const pixelIndex = y * width + x;
-      if (mask[pixelIndex] || !isBackgroundCandidate(pixelIndex)) return;
+      if (mask[pixelIndex] || !isAreaCandidate(pixelIndex)) return;
       mask[pixelIndex] = 1;
       stack[stackSize] = pixelIndex;
       stackSize += 1;
     };
-    for (let x = 0; x < width; x += 1) {
-      addCandidate(x, 0);
-      if (height > 1) addCandidate(x, height - 1);
-    }
-    for (let y = 1; y < height - 1; y += 1) {
-      addCandidate(0, y);
-      if (width > 1) addCandidate(width - 1, y);
-    }
+    addCandidate(seed.x, seed.y);
     while (stackSize > 0) {
       const pixelIndex = stack[--stackSize];
       const x = pixelIndex % width;
@@ -704,7 +671,7 @@ export default function PixelEditor({
       maxY = Math.max(maxY, y);
     }
     if (maxX < minX || maxY < minY) {
-      setMessage("Could not detect a connected background region.");
+      setMessage("Could not detect a connected area.");
       return;
     }
     const maskRows = [];
@@ -727,7 +694,7 @@ export default function PixelEditor({
       width: maxX - minX + 1,
       height: maxY - minY + 1,
       maskRows,
-      name: "Background",
+      name: "Detected area",
     })) {
       setMessage("");
     }
@@ -756,6 +723,12 @@ export default function PixelEditor({
   const onPointerDown = (event) => {
     const pixel = getPixelFromEvent(event);
     if (!pixel) return;
+    if (detectingArea) {
+      if (event.button !== 0) return;
+      detectAreaFromPixel(pixel);
+      setDetectingArea(false);
+      return;
+    }
     if (selectingArea) {
       if (areaSelectionMode === "freehand") {
         if (event.button !== 0) return;
@@ -934,6 +907,7 @@ export default function PixelEditor({
           style={selectingArea && areaSelectionMode === "freehand" ? activeToolButtonStyle : undefined}
           onClick={() => {
             const canceling = selectingArea && areaSelectionMode === "freehand";
+            setDetectingArea(false);
             setAreaSelectionMode("freehand");
             setSelectingArea(!canceling);
             setSelection(null);
@@ -951,6 +925,7 @@ export default function PixelEditor({
           style={selectingArea && areaSelectionMode === "rectangle" ? activeToolButtonStyle : undefined}
           onClick={() => {
             const canceling = selectingArea && areaSelectionMode === "rectangle";
+            setDetectingArea(false);
             setAreaSelectionMode("rectangle");
             setSelectingArea(!canceling);
             setSelection(null);
@@ -962,10 +937,26 @@ export default function PixelEditor({
         >
           {selectingArea && areaSelectionMode === "rectangle" ? "Cancel selection" : "Rectangular area"}
         </button>
-        <button type="button" onClick={detectBackgroundArea}>Detect background</button>
-        <button type="button" aria-pressed={!selectingArea && paintTool === "brush"} style={!selectingArea && paintTool === "brush" ? activeToolButtonStyle : undefined} onClick={() => { setSelectingArea(false); setPaintTool("brush"); }}>Brush</button>
-        <button type="button" aria-pressed={!selectingArea && paintTool === "bucket"} style={!selectingArea && paintTool === "bucket" ? activeToolButtonStyle : undefined} onClick={() => { setSelectingArea(false); setPaintTool("bucket"); }}>Fill</button>
-        <button type="button" aria-pressed={!selectingArea && paintTool === "eyedropper"} style={!selectingArea && paintTool === "eyedropper" ? activeToolButtonStyle : undefined} onClick={() => { setSelectingArea(false); setPaintTool("eyedropper"); }}>Pick color</button>
+        <button
+          type="button"
+          aria-pressed={detectingArea}
+          style={detectingArea ? activeToolButtonStyle : undefined}
+          onClick={() => {
+            const canceling = detectingArea;
+            setDetectingArea(!canceling);
+            setSelectingArea(false);
+            setSelection(null);
+            setFreehandPath([]);
+            freehandPathRef.current = [];
+            selectionStartRef.current = null;
+            setMessage(canceling ? "" : "Click a pixel to detect its connected area.");
+          }}
+        >
+          {detectingArea ? "Cancel detection" : "Detect area"}
+        </button>
+        <button type="button" aria-pressed={!selectingArea && !detectingArea && paintTool === "brush"} style={!selectingArea && !detectingArea && paintTool === "brush" ? activeToolButtonStyle : undefined} onClick={() => { setSelectingArea(false); setDetectingArea(false); setPaintTool("brush"); setMessage(""); }}>Brush</button>
+        <button type="button" aria-pressed={!selectingArea && !detectingArea && paintTool === "bucket"} style={!selectingArea && !detectingArea && paintTool === "bucket" ? activeToolButtonStyle : undefined} onClick={() => { setSelectingArea(false); setDetectingArea(false); setPaintTool("bucket"); setMessage(""); }}>Fill</button>
+        <button type="button" aria-pressed={!selectingArea && !detectingArea && paintTool === "eyedropper"} style={!selectingArea && !detectingArea && paintTool === "eyedropper" ? activeToolButtonStyle : undefined} onClick={() => { setSelectingArea(false); setDetectingArea(false); setPaintTool("eyedropper"); setMessage(""); }}>Pick color</button>
         <label>
           <input type="checkbox" checked={grid} onChange={(event) => setGrid(event.target.checked)} />
           Grid
