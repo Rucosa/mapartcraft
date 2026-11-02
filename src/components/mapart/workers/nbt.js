@@ -521,8 +521,8 @@ function shiftStaircaseRegions(data, params) {
 
 async function optimizeStaircaseHeights(data, advanced) {
   const params = advanced
-    ? { boundary: 1, size: 0.05, gravity: 0.003, jump: 0.05 }
-    : { boundary: 1, size: 0.25, gravity: 0, jump: 0.05 };
+    ? { boundary: 1, size: 0.05, gravity: 0.03, jump: 0.05 }
+    : { boundary: 1, size: 0.25, gravity: 0.03, jump: 0.05 };
   const optimizedHeights = await solveExactStaircaseHeights(data, params, {
     irls: advanced ? 2 : 0,
     onProgress: (progress) => {
