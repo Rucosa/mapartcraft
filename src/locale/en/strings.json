@@ -104,8 +104,8 @@
       "FULL-UNOBTAINABLE": "Full-Unobtainable",
       "UPWARDS-ONLY": "Half-Light (Upwards Only)",
       "REVERSE-UPWARDS-ONLY": "Half-Dark (Reverse-Upwards Only)",
-      "OPTIMIZED-COMPACT": "Optimized (Compact)",
-      "OPTIMIZED-TERRACES": "Optimized (Terraces)"
+      "OPTIMIZED-COMPACT": "Tobias' Optimized (Compact)",
+      "OPTIMIZED-TERRACES": "Tobias' Optimized (Terraces)"
     },
     "NBT-SPECIFIC": {
       "WHERE-SUPPORT-BLOCKS": {

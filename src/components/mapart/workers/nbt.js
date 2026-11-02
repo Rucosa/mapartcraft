@@ -1,6 +1,8 @@
 // eslint-disable-next-line import/no-anonymous-default-export
 // eslint-disable-next-line no-restricted-globals
 
+import solveExactStaircaseHeights from "./staircaseOptimizer";
+
 export default function NBTWorker (args) {
 
 // begin variables passed in onmessage
@@ -517,10 +519,20 @@ function shiftStaircaseRegions(data, params) {
   return moved;
 }
 
-function optimizeStaircaseHeights(data, advanced) {
+async function optimizeStaircaseHeights(data, advanced) {
   const params = advanced
     ? { boundary: 1, size: 0.05, gravity: 0.003, jump: 0.05 }
-    : { boundary: 1, size: 0.25, gravity: 0.03, jump: 0.05 };
+    : { boundary: 1, size: 0.25, gravity: 0, jump: 0.05 };
+  const optimizedHeights = await solveExactStaircaseHeights(data, params, {
+    irls: advanced ? 2 : 0,
+    onProgress: (progress) => {
+      postMessage({
+        head: progressReportHead,
+        body: 0.8 + progress * 0.2,
+      });
+    },
+  });
+  data.heights.set(optimizedHeights);
   refineStaircaseHeights(data, params);
   if (advanced) {
     for (let round = 0; round < 6; round += 1) {
@@ -668,24 +680,20 @@ class Map_NBT {
   }
 
   getPhysicalLayout() {
+    const isOptimizedStaircase = [
+      MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_COMPACT.uniqueId,
+      MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId,
+    ].includes(optionValue_staircasing);
     for (let columnNumber = 0; columnNumber < this.mapColoursLayout.length; columnNumber++) {
       this.getPhysicalLayout_individualColumn(columnNumber);
       postMessage({
         head: progressReportHead,
-        body: (columnNumber + 1) / this.mapColoursLayout.length,
+        body: ((columnNumber + 1) / this.mapColoursLayout.length) * (isOptimizedStaircase ? 0.8 : 1),
       });
-    }
-    if (
-      optionValue_staircasing === MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_COMPACT.uniqueId ||
-      optionValue_staircasing === MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId
-    ) {
-      this.optimizeStaircaseLayout(
-        optionValue_staircasing === MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId
-      );
     }
   }
 
-  optimizeStaircaseLayout(advanced) {
+  async optimizeStaircaseLayout(advanced) {
     const width = this.physicalLayout.length;
     const depth = this.mapColoursLayout[0].length + 1;
     const cellCount = width * depth;
@@ -766,7 +774,7 @@ class Map_NBT {
       depth,
       maxHeight: optimizationMaxHeight,
     };
-    optimizeStaircaseHeights(data, advanced);
+    await optimizeStaircaseHeights(data, advanced);
     if (!staircaseHeightsAreValid(data)) {
       throw new Error("Optimized staircase heights do not preserve map shades.");
     }
@@ -1080,13 +1088,11 @@ class Map_NBT {
     ];
   }
 
-  getNBT() {
+  async getNBT() {
     this.constructPaletteLookups();
     this.setNBT_json_palette();
     this.setNBT_json_DataVersion();
     this.setNBT_json_blocks();
-    this.setNBT_json_size();
-
     // console.log(NBT_json);
 
     // This is an ugly hack, but getPhysicalLayout_individualColumn() has the block array tightly coupled to plateau math
@@ -1111,6 +1117,16 @@ class Map_NBT {
         blockArray[i].state.value = airID;
       }
     }
+
+    if (
+      optionValue_staircasing === MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_COMPACT.uniqueId ||
+      optionValue_staircasing === MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId
+    ) {
+      await this.optimizeStaircaseLayout(
+        optionValue_staircasing === MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId
+      );
+    }
+    this.setNBT_json_size();
 
     let nbtWriter = new NBTWriter();
     nbtWriter.writeTopLevelCompound(this.NBT_json);
@@ -1319,7 +1335,8 @@ function setupColoursLayoutsFromPixelsData() {
   }
 }
 
-onmessage = (e) => {
+// eslint-disable-next-line no-restricted-globals
+onmessage = async (e) => {
   coloursJSON = e.data.body.coloursJSON;
   MapModes = e.data.body.MapModes;
   WhereSupportBlocksModes = e.data.body.WhereSupportBlocksModes;
@@ -1350,7 +1367,7 @@ onmessage = (e) => {
       for (let whichMap_y = 0; whichMap_y < maps.length; whichMap_y++) {
         for (let whichMap_x = 0; whichMap_x < maps[0].length; whichMap_x++) {
           const map_NBT = new Map_NBT(maps[whichMap_y][whichMap_x]);
-          const NBT_Array = map_NBT.getNBT();
+          const NBT_Array = await map_NBT.getNBT();
           postMessage({
             head: headerMessage === "CREATE_NBT_JOINED_FOR_VIEW_ONLINE" ? "NBT_FOR_VIEW_ONLINE" : "NBT_ARRAY",
             body: {
