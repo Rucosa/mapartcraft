@@ -41,6 +41,8 @@ class MapSettings extends Component {
       onOptionChange_showGridOverlay,
       optionValue_staircasing,
       onOptionChange_staircasing,
+      optionValue_staircasingGravity,
+      onOptionChange_staircasingGravity,
       optionValue_whereSupportBlocks,
       onOptionChange_WhereSupportBlocks,
       optionValue_supportBlock,
@@ -291,6 +293,34 @@ class MapSettings extends Component {
         <br />
       </React.Fragment>
     );
+    const isOptimizedStaircase =
+      optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId &&
+      [
+        MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_COMPACT.uniqueId,
+        MapModes.SCHEMATIC_NBT.staircaseModes.OPTIMIZED_TERRACES.uniqueId,
+      ].includes(optionValue_staircasing);
+    const setting_staircasingGravity = isOptimizedStaircase ? (
+      <React.Fragment>
+        <Tooltip tooltipText={getLocaleString("MAP-SETTINGS/3D/GRAVITY-TT")}>
+          <b>{getLocaleString("MAP-SETTINGS/3D/GRAVITY")}:</b>
+        </Tooltip>{" "}
+        <input
+          type="number"
+          min="0"
+          step="0.001"
+          value={optionValue_staircasingGravity}
+          onChange={(e) => onOptionChange_staircasingGravity(e.target.value)}
+          onBlur={(e) => {
+            if (e.target.value === "" || !Number.isFinite(Number(e.target.value))) {
+              onOptionChange_staircasingGravity("0.03");
+            }
+          }}
+          aria-label={getLocaleString("MAP-SETTINGS/3D/GRAVITY")}
+          style={{ width: "6em" }}
+        />
+        <br />
+      </React.Fragment>
+    ) : null;
     let settings_mapModeConditional;
     if (optionValue_modeNBTOrMapdat === MapModes.SCHEMATIC_NBT.uniqueId) {
       settings_mapModeConditional = (
@@ -805,6 +835,7 @@ class MapSettings extends Component {
         {settingGroup_cropping}
         {setting_grid}
         {setting_staircasing}
+        {setting_staircasingGravity}
         {settings_mapModeConditional}
         {setting_betterColour}
         {setting_dithering}

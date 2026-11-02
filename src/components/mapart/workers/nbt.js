@@ -11,6 +11,7 @@ var MapModes;
 var WhereSupportBlocksModes;
 var optionValue_version;
 var optionValue_staircasing;
+var optionValue_staircasingGravity;
 var optionValue_whereSupportBlocks;
 var optionValue_supportBlock;
 var pixelsData;
@@ -521,8 +522,8 @@ function shiftStaircaseRegions(data, params) {
 
 async function optimizeStaircaseHeights(data, advanced) {
   const params = advanced
-    ? { boundary: 1, size: 0.05, gravity: 0.03, jump: 0.05 }
-    : { boundary: 1, size: 0.25, gravity: 0.03, jump: 0.05 };
+    ? { boundary: 1, size: 0.05, gravity: optionValue_staircasingGravity, jump: 0.05 }
+    : { boundary: 1, size: 0.25, gravity: optionValue_staircasingGravity, jump: 0.05 };
   const optimizedHeights = await solveExactStaircaseHeights(data, params, {
     irls: advanced ? 2 : 0,
     onProgress: (progress) => {
@@ -1342,6 +1343,9 @@ onmessage = async (e) => {
   WhereSupportBlocksModes = e.data.body.WhereSupportBlocksModes;
   optionValue_version = e.data.body.optionValue_version;
   optionValue_staircasing = e.data.body.optionValue_staircasing;
+  const requestedStaircaseGravity = Number(e.data.body.optionValue_staircasingGravity);
+  optionValue_staircasingGravity =
+    Number.isFinite(requestedStaircaseGravity) && requestedStaircaseGravity >= 0 ? requestedStaircaseGravity : 0.03;
   optionValue_whereSupportBlocks = e.data.body.optionValue_whereSupportBlocks;
   optionValue_supportBlock = e.data.body.optionValue_supportBlock;
   pixelsData = e.data.body.pixelsData;

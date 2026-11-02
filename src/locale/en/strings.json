@@ -105,7 +105,9 @@
       "UPWARDS-ONLY": "Half-Light (Upwards Only)",
       "REVERSE-UPWARDS-ONLY": "Half-Dark (Reverse-Upwards Only)",
       "OPTIMIZED-COMPACT": "Tobias' Optimized (Compact)",
-      "OPTIMIZED-TERRACES": "Tobias' Optimized (Terraces)"
+      "OPTIMIZED-TERRACES": "Tobias' Optimized (Terraces)",
+      "GRAVITY": "Gravity",
+      "GRAVITY-TT": "Controls how strongly the optimizer favors lower builds. Higher values produce shorter staircases."
     },
     "NBT-SPECIFIC": {
       "WHERE-SUPPORT-BLOCKS": {

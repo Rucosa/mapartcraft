@@ -99,6 +99,8 @@
       "FULL-LIGHT": "Claro (Creciente Norte-Sur)",
       "OPTIMIZED-COMPACT": "Optimizado (compacto)",
       "OPTIMIZED-TERRACES": "Optimizado (terrazas)",
+      "GRAVITY": "Gravedad",
+      "GRAVITY-TT": "Controla cuánto favorece el optimizador las construcciones más bajas. Un valor mayor produce escaleras más cortas.",
       "ON": "Encendido",
       "ON-UNOBTAINABLE": "Encendido (No obtenibles)",
       "FULL-UNOBTAINABLE": "Solo colores no obtenibles"

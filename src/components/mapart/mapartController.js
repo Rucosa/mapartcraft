@@ -40,6 +40,7 @@ class MapartController extends Component {
     optionValue_cropImage_percent_y: 50,
     optionValue_showGridOverlay: false,
     optionValue_staircasing: MapModes.SCHEMATIC_NBT.staircaseModes.VALLEY.uniqueId,
+    optionValue_staircasingGravity: 0.03,
     optionValue_whereSupportBlocks: WhereSupportBlocksModes.ALL_OPTIMIZED.uniqueId,
     optionValue_supportBlock: "cobblestone",
     optionValue_transparency: false,
@@ -344,6 +345,12 @@ class MapartController extends Component {
   onOptionChange_staircasing = (e) => {
     const staircasingValue = parseInt(e.target.value);
     this.setState({ optionValue_staircasing: staircasingValue });
+  };
+
+  onOptionChange_staircasingGravity = (value) => {
+    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+      this.setState({ optionValue_staircasingGravity: value });
+    }
   };
 
   onOptionChange_transparency = () => {
@@ -879,6 +886,7 @@ class MapartController extends Component {
       optionValue_cropImage_percent_y,
       optionValue_showGridOverlay,
       optionValue_staircasing,
+      optionValue_staircasingGravity,
       optionValue_whereSupportBlocks,
       optionValue_supportBlock,
       optionValue_transparency,
@@ -1044,6 +1052,8 @@ class MapartController extends Component {
               onOptionChange_showGridOverlay={this.onOptionChange_showGridOverlay}
               optionValue_staircasing={optionValue_staircasing}
               onOptionChange_staircasing={this.onOptionChange_staircasing}
+              optionValue_staircasingGravity={optionValue_staircasingGravity}
+              onOptionChange_staircasingGravity={this.onOptionChange_staircasingGravity}
               optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
               onOptionChange_WhereSupportBlocks={this.onOptionChange_WhereSupportBlocks}
               optionValue_supportBlock={optionValue_supportBlock}
@@ -1100,6 +1110,7 @@ class MapartController extends Component {
               optionValue_cropImage_percent_x={optionValue_cropImage_percent_x}
               optionValue_cropImage_percent_y={optionValue_cropImage_percent_y}
               optionValue_staircasing={optionValue_staircasing}
+              optionValue_staircasingGravity={optionValue_staircasingGravity}
               optionValue_whereSupportBlocks={optionValue_whereSupportBlocks}
               optionValue_supportBlock={optionValue_supportBlock}
               optionValue_transparency={optionValue_transparency}
