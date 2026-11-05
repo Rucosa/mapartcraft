@@ -242,6 +242,21 @@ export default function PixelEditor({
   };
 
   useEffect(() => {
+    setLayers(initialLayers);
+    setSelectedLayerId((currentId) =>
+      initialLayers.some((layer) => layer.id === currentId) ? currentId : null
+    );
+    if (initialLayers.length === 0) {
+      setSelectingArea(false);
+      setDetectingArea(false);
+      setSelection(null);
+      setFreehandPath([]);
+      freehandPathRef.current = [];
+      selectionStartRef.current = null;
+    }
+  }, [initialLayers]);
+
+  useEffect(() => {
     if (!image || !image.complete || !image.naturalWidth) return;
 
     const baseCanvas = document.createElement("canvas");

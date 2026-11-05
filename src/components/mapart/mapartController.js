@@ -195,6 +195,11 @@ class MapartController extends Component {
         pixelEditorLayers: [],
         pixelEditorWorkerLayers: [],
         pixelEditorLayerColoursJSON: {},
+        currentMaterialsData: {
+          pixelsData: null,
+          maps: [[]],
+          currentSelectedBlocks: {},
+        },
       });
     };
     img.src = imageURL;
@@ -618,7 +623,7 @@ class MapartController extends Component {
           });
       }
     }
-    return "https://mike2b2t.github.io/mapartcraft/?preset=" + presetQueryString;
+    return "https://rucosa.github.io/mapartcraft/?preset=" + presetQueryString;
   };
 
   handleSharePreset = () => {

@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/mapartcraft/static/css/main.e328bfd3.css",
-    "main.js": "/mapartcraft/static/js/main.6cac8caa.js",
+    "main.js": "/mapartcraft/static/js/main.fdf63146.js",
     "static/js/495.af1d0d6f.chunk.js": "/mapartcraft/static/js/495.af1d0d6f.chunk.js",
     "static/media/highs.wasm": "/mapartcraft/static/media/highs.7e2ab9fbfbc7c877c8c4.wasm",
     "static/media/textures.png": "/mapartcraft/static/media/textures.7a164605051b2f6fa999.png",
@@ -12,11 +12,11 @@
     "static/media/flag.svg": "/mapartcraft/static/media/flag.79f8026389226d251e8d5d1a323c73e0.svg",
     "index.html": "/mapartcraft/index.html",
     "main.e328bfd3.css.map": "/mapartcraft/static/css/main.e328bfd3.css.map",
-    "main.6cac8caa.js.map": "/mapartcraft/static/js/main.6cac8caa.js.map",
+    "main.fdf63146.js.map": "/mapartcraft/static/js/main.fdf63146.js.map",
     "495.af1d0d6f.chunk.js.map": "/mapartcraft/static/js/495.af1d0d6f.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e328bfd3.css",
-    "static/js/main.6cac8caa.js"
+    "static/js/main.fdf63146.js"
   ]
 }
